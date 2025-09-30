@@ -10,6 +10,7 @@ import requests
 from requests.adapters import HTTPAdapter, Retry
 
 from constants import AUTH_GROUP_1
+from util.timeParser import TimeParser
 
 BASE_URL = "https://apis.smartcity.hn/bildungscampus/iotplatform/digitalbeehive/v1"   
 API_KEY  = os.getenv("API_KEY")
@@ -194,6 +195,16 @@ class Client():
     def get_yesterday_time_series_for_all_entities(self, authGroup: str) -> pd.DataFrame:
         day_str = (datetime.now(ZoneInfo("Europe/Berlin")) - timedelta(days=1)).strftime("%d.%m.%Y")
         return self._get_day_df(authGroup, day_str)
+    
+    def get_yesterday_time_series_for_all_entities_bson(self, authGroup: str, *, replace_ts: bool = True) -> pd.DataFrame:
+        """
+        Wie get_yesterday_time_series_for_all_entities, aber ergänzt eine BSON-geeignete UTC-Spalte.
+        - replace_ts=False: fügt 'datetime_utc' hinzu
+        - replace_ts=True: ersetzt 'ts' durch UTC-datetime (praktisch für direkten Mongo-Insert)
+        """
+        tp = TimeParser()
+        df = self.get_yesterday_time_series_for_all_entities(authGroup)
+        return tp.inject_bson_datetime(df, replace_ts=replace_ts)
 
     def get_time_series_for_all_entities_on(self, authGroup: str, day: str) -> pd.DataFrame:
         """
@@ -203,8 +214,4 @@ class Client():
     
 if __name__ == "__main__":
     c = Client()
-    print(c._get_all_time_series_keys(AUTH_GROUP_1))
-    entity_ids = c.get_all_entity_ids(AUTH_GROUP_1)
-    print(entity_ids)
-    todays_data_df = c.get_today_time_series_for_all_entities(AUTH_GROUP_1)
-    todays_data_df.to_csv("time_series.csv", index=False, sep=";", encoding="utf-8-sig")
+    c.get_yesterday_time_series_for_all_entities_bson(AUTH_GROUP_1).to_csv("test_data/bson_test.csv",index=False, sep=";", encoding="utf-8-sig")

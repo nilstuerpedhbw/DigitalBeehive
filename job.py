@@ -6,8 +6,13 @@ from pathlib import Path
 from datetime import datetime
 from zoneinfo import ZoneInfo  
 
+from pandas import DataFrame
+
 from constants import AUTH_GROUP_1, AUTH_GROUP_2, AUTH_GROUP_3
 from client import Client
+from db.beehiveDbClient import BeehiveDbClient
+
+created_data_frames = []
 
 def setup_paths() -> tuple[Path, Path, str]:
     """
@@ -60,8 +65,9 @@ def export_group(c: Client, day_dir: Path, today_str: str, auth_group: str, file
     """
     try:
         logger.info(f"Starte Export: {filename_prefix} (authGroup={auth_group})")
-        # Verwende die DF-Variante (falls deine Methode anders heißt, hier anpassen):
         df = c.get_today_time_series_for_all_entities(auth_group)
+
+        created_data_frames.append(df)
 
         csv_path = day_dir / f"{filename_prefix}_{today_str}.csv"
         df.to_csv(csv_path, index=False, sep=";", encoding="utf-8-sig")
@@ -70,6 +76,18 @@ def export_group(c: Client, day_dir: Path, today_str: str, auth_group: str, file
         logger.info(f"Zeilen: {len(df)} | Spalten: {list(df.columns)}")
     except Exception as e:
         logger.error(f"Fehler beim Export {filename_prefix}: {e}", exc_info=True)
+
+def insert_into_database(data_frames: list[DataFrame], logger: logging.Logger):
+    dbClient = BeehiveDbClient()
+    logger.log(logging.INFO, "Starting Insertion into DB")
+    try:
+        for df in data_frames:
+            dbClient.insert_many(df)
+        logging.info("Insertion Completed")
+    except Exception as e:
+        logging.error("Logging Failed with Error: " + e)
+
+
 
 def main():
     day_dir, log_file, today_str = setup_paths()
@@ -84,6 +102,9 @@ def main():
     export_group(c, day_dir, today_str, AUTH_GROUP_1, "auth_group_1", logger)
     export_group(c, day_dir, today_str, AUTH_GROUP_2, "auth_group_2", logger)
     export_group(c, day_dir, today_str, AUTH_GROUP_3, "auth_group_3", logger)
+    logger.info("Alle Daten wurden als Csv Datei gespeichert.")
+
+    insert_into_database(created_data_frames, logger=logger )
 
     logger.info("=== Daily Export Job beendet ===")
 

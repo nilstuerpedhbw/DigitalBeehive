@@ -1,0 +1,26 @@
+2025-09-30 16:10:57 [INFO] === Daily Export Job gestartet ===
+2025-09-30 16:10:57 [INFO] Tagesordner: C:\Users\Nils\DHBW\Digital Beehive\Digital Beehive Api\data\2025-09-30
+2025-09-30 16:10:57 [INFO] Starte Export: auth_group_1 (authGroup=digital_bee_hive_42-s2120)
+2025-09-30 16:11:00 [INFO] Export erfolgreich: C:\Users\Nils\DHBW\Digital Beehive\Digital Beehive Api\data\2025-09-30\auth_group_1_2025-09-30.csv
+2025-09-30 16:11:00 [INFO] Zeilen: 936 | Spalten: ['entityId', 'key', 'ts', 'value', 'datetime']
+2025-09-30 16:11:00 [INFO] Starte Export: auth_group_2 (authGroup=digital_bee_hive_42_dragino-s31lb)
+2025-09-30 16:11:04 [INFO] Export erfolgreich: C:\Users\Nils\DHBW\Digital Beehive\Digital Beehive Api\data\2025-09-30\auth_group_2_2025-09-30.csv
+2025-09-30 16:11:04 [INFO] Zeilen: 290 | Spalten: ['entityId', 'key', 'ts', 'value', 'datetime']
+2025-09-30 16:11:04 [INFO] Starte Export: auth_group_3 (authGroup=digital_bee_hive_42_dragino-d23-lb)
+2025-09-30 16:11:08 [INFO] Export erfolgreich: C:\Users\Nils\DHBW\Digital Beehive\Digital Beehive Api\data\2025-09-30\auth_group_3_2025-09-30.csv
+2025-09-30 16:11:08 [INFO] Zeilen: 432 | Spalten: ['entityId', 'key', 'ts', 'value', 'datetime']
+2025-09-30 16:11:08 [INFO] === Daily Export Job beendet ===
+2025-09-30 19:43:56 [INFO] === Daily Export Job gestartet ===
+2025-09-30 19:43:56 [INFO] Tagesordner: C:\Users\Nils\DHBW\Digital Beehive\Digital Beehive Api\data\2025-09-30
+2025-09-30 19:43:56 [INFO] Starte Export: auth_group_1 (authGroup=digital_bee_hive_42-s2120)
+2025-09-30 19:43:58 [INFO] Export erfolgreich: C:\Users\Nils\DHBW\Digital Beehive\Digital Beehive Api\data\2025-09-30\auth_group_1_2025-09-30.csv
+2025-09-30 19:43:58 [INFO] Zeilen: 1112 | Spalten: ['entityId', 'key', 'ts', 'value', 'datetime']
+2025-09-30 19:43:58 [INFO] Starte Export: auth_group_2 (authGroup=digital_bee_hive_42_dragino-s31lb)
+2025-09-30 19:44:01 [INFO] Export erfolgreich: C:\Users\Nils\DHBW\Digital Beehive\Digital Beehive Api\data\2025-09-30\auth_group_2_2025-09-30.csv
+2025-09-30 19:44:01 [INFO] Zeilen: 350 | Spalten: ['entityId', 'key', 'ts', 'value', 'datetime']
+2025-09-30 19:44:01 [INFO] Starte Export: auth_group_3 (authGroup=digital_bee_hive_42_dragino-d23-lb)
+2025-09-30 19:44:05 [INFO] Export erfolgreich: C:\Users\Nils\DHBW\Digital Beehive\Digital Beehive Api\data\2025-09-30\auth_group_3_2025-09-30.csv
+2025-09-30 19:44:05 [INFO] Zeilen: 528 | Spalten: ['entityId', 'key', 'ts', 'value', 'datetime']
+2025-09-30 19:44:05 [INFO] Alle Daten wurden als Csv Datei gespeicher.
+2025-09-30 19:44:05 [INFO] Starting Insertion into DB
+2025-09-30 19:44:11 [INFO] === Daily Export Job beendet ===

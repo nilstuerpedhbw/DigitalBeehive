@@ -1,19 +1,21 @@
 from __future__ import annotations
 
+import pandas as pd
+
 from datetime import datetime, timedelta, timezone 
 
 class TimeParser():
-    def ts_to_bson_datetime(self, ts: int | float) -> datetime:
-        """
-        Wandelt Unix-Timestamp (ms oder s) robust in UTC-aware datetime um.
-        - ms: ts > 1e12   -> /1000
-        - s:  sonst
-        """
-        try:
-            t = float(ts)
-        except Exception:
-            raise ValueError(f"Ungültiger Timestamp: {ts!r}")
+    def inject_bson_datetime(self, df: pd.DataFrame, replace_ts: bool = False) -> pd.DataFrame:
+        if df.empty or "ts" not in df.columns:
+            return df
 
-        if t > 1e12:  # Heuristik: Millisekunden
-            return datetime.fromtimestamp(t / 1000.0, tz=timezone.utc)
-        return datetime.fromtimestamp(t, tz=timezone.utc)
+        ts_num = pd.to_numeric(df["ts"], errors="coerce")
+        is_ms = ts_num.dropna().gt(1e12).any()
+        sec = ts_num / (1000.0 if is_ms else 1.0)
+
+        out = df.copy()
+        out["datetime_utc"] = pd.to_datetime(sec, unit="s", utc=True)
+
+        if replace_ts:
+            out = out.drop(columns=["ts"]).rename(columns={"datetime_utc": "ts"})
+        return out
