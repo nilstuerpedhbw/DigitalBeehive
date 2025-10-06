@@ -11,6 +11,7 @@ from requests.adapters import HTTPAdapter, Retry
 
 from constants import WETTERSTATION_AUTHT_GROUP
 from util.timeParser import TimeParser
+from util.mapping import entity_to_beehives
 
 BASE_URL = "https://apis.smartcity.hn/bildungscampus/iotplatform/digitalbeehive/v1"   
 API_KEY  = os.getenv("API_KEY")
@@ -128,6 +129,11 @@ class Client():
                 rows.append({"entityId": eid, "key": None, "ts": None, "value": f"error: {str(e)}"})
 
         df = pd.DataFrame(rows)
+        if "ts" in df.columns and not df.empty:
+            # Leere Strings als NA behandeln und in Zahl konvertieren
+            df["ts"] = pd.to_numeric(df["ts"].replace(["", "NaN", "nan"], pd.NA), errors="coerce")
+            df = df[df["ts"].notna()].copy()
+        df["beehiveId"] = df["entityId"].map(entity_to_beehives)
         return self._to_berlin_datetime(df)
     
     def get_all_entities(self, authGroup:str) -> json:
@@ -186,6 +192,13 @@ class Client():
         r.raise_for_status() 
 
         time_series = r.json()
+
+        try:
+         beehive_id = entity_to_beehives(entityId)  # erwartet: vorhandene Mapping-Funktion
+        except Exception:
+         beehive_id = None
+
+        time_series["timeseries"].setdefault("beehiveId", beehive_id)
         return time_series   
          
     def get_today_time_series_for_all_entities(self, authGroup: str) -> pd.DataFrame:
@@ -204,7 +217,8 @@ class Client():
         """
         tp = TimeParser()
         df = self.get_yesterday_time_series_for_all_entities(authGroup)
-        return tp.inject_bson_datetime(df, replace_ts=replace_ts)
+        df = tp.inject_bson_datetime(df, replace_ts=replace_ts)
+        return df
 
     def get_time_series_for_all_entities_on(self, authGroup: str, day: str) -> pd.DataFrame:
         """
