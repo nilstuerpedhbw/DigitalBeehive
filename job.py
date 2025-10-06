@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 from pandas import DataFrame
 
-from constants import AUTH_GROUP_1, AUTH_GROUP_2, AUTH_GROUP_3
+from constants import WETTERSTATION_AUTHT_GROUP, FUTTERKAMMER_AUTH_GROUP, BRUTKAMMER_AUTH_GROUP
 from client import Client
 from db.beehiveDbClient import BeehiveDbClient
 
@@ -99,9 +99,9 @@ def main():
     c = Client()
 
     # Nacheinander exportieren – unabhängig per try/except
-    export_group(c, day_dir, today_str, AUTH_GROUP_1, "auth_group_1", logger)
-    export_group(c, day_dir, today_str, AUTH_GROUP_2, "auth_group_2", logger)
-    export_group(c, day_dir, today_str, AUTH_GROUP_3, "auth_group_3", logger)
+    export_group(c, day_dir, today_str, WETTERSTATION_AUTHT_GROUP, "auth_group_1", logger)
+    export_group(c, day_dir, today_str, FUTTERKAMMER_AUTH_GROUP, "auth_group_2", logger)
+    export_group(c, day_dir, today_str, BRUTKAMMER_AUTH_GROUP, "auth_group_3", logger)
     logger.info("Alle Daten wurden als Csv Datei gespeichert.")
 
     insert_into_database(created_data_frames, logger=logger )

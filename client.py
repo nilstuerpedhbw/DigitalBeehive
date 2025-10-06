@@ -9,7 +9,7 @@ import pandas as pd
 import requests
 from requests.adapters import HTTPAdapter, Retry
 
-from constants import AUTH_GROUP_1
+from constants import WETTERSTATION_AUTHT_GROUP
 from util.timeParser import TimeParser
 
 BASE_URL = "https://apis.smartcity.hn/bildungscampus/iotplatform/digitalbeehive/v1"   
@@ -214,4 +214,4 @@ class Client():
     
 if __name__ == "__main__":
     c = Client()
-    c.get_yesterday_time_series_for_all_entities_bson(AUTH_GROUP_1).to_csv("test_data/bson_test.csv",index=False, sep=";", encoding="utf-8-sig")
+    c.get_yesterday_time_series_for_all_entities_bson(WETTERSTATION_AUTHT_GROUP).to_csv("test_data/bson_test.csv",index=False, sep=";", encoding="utf-8-sig")

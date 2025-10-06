@@ -1,3 +1,36 @@
-AUTH_GROUP_1 = "digital_bee_hive_42-s2120"
-AUTH_GROUP_2 = "digital_bee_hive_42_dragino-s31lb"
-AUTH_GROUP_3 = "digital_bee_hive_42_dragino-d23-lb"
+WETTERSTATION_AUTHT_GROUP = "digital_bee_hive_42-s2120"
+FUTTERKAMMER_AUTH_GROUP = "digital_bee_hive_42_dragino-s31lb"
+BRUTKAMMER_AUTH_GROUP = "digital_bee_hive_42_dragino-d23-lb"
+
+
+SENSOR_TO_ENTITY_ID = {
+    "LoRa-2CF7F1C0613005BC": "cb45a700-fa97-11ef-9d11-f54d6a2753bf",
+    "LoRa-A8404138A188669C": "a4d4afc0-6eb6-11ef-b667-951a94d6009e",
+    "LoRa-A84041CC625AE81E": "a865a130-ffde-11ef-9545-f1c19ab288c3",
+    "LoRa-A8404160C85A7A7B": "6fe2a6f0-2fe0-11f0-ae5e-8797afde61b2",
+    "LoRa-A84041892E5A7A68": "39182140-ffde-11ef-9545-f1c19ab288c3",
+    "LoRa-A840419521864618": "efa9b480-8548-11ee-b88e-89581e0193df",
+    "LoRa-A840411F645AE815": "f99dddb0-ffde-11ef-9545-f1c19ab288c3", 
+}
+
+SENSOR_TO_BEEHIVE_IDS = {
+    "LoRa-2CF7F1C0613005BC": [1, 2, 3],
+    "LoRa-A840411F645AE815": [1],
+    "LoRa-A84041892E5A7A68": [1],
+    "LoRa-A84041CC625AE81E": [2],
+    "LoRa-A840419521864618": [2],
+    "LoRa-A8404138A188669C": [3],
+    "LoRa-A8404160C85A7A7B": [3],
+}
+
+ENTITY_ID_TO_SENSOR = {v: k for k, v in SENSOR_TO_ENTITY_ID.items()}
+
+SENSOR_TYPE = {
+    "LoRa-2CF7F1C0613005BC": "LoRaWAN SenseCAP-S2120",
+    "LoRa-A8404138A188669C": "LoRaWAN Dragino-S31-LB",
+    "LoRa-A84041CC625AE81E": "LoRaWAN Dragino-S31-LB",
+    "LoRa-A8404160C85A7A7B": "LoRaWAN Dragino-D23-LB",
+    "LoRa-A84041892E5A7A68": "LoRaWAN Dragino-D23-LB",
+    "LoRa-A840419521864618": "LoRaWAN Dragino-D23-LB",
+    "LoRa-A840411F645AE815": "LoRaWAN Dragino-S31-LB",  
+}
