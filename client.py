@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from dotenv import load_dotenv
+load_dotenv()  # ← ZUERST .env laden
+
 import os
 import json
 from datetime import datetime, timedelta
@@ -13,7 +16,7 @@ from constants import WETTERSTATION_AUTHT_GROUP
 from util.timeParser import TimeParser
 
 BASE_URL = "https://apis.smartcity.hn/bildungscampus/iotplatform/digitalbeehive/v1"   
-API_KEY  = os.getenv("API_KEY")
+API_KEY = os.getenv("API_KEY")
 
 class Client():
     def _make_session(self) -> requests.Session:
