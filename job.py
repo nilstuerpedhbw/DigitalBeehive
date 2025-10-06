@@ -85,7 +85,7 @@ def insert_into_database(data_frames: list[DataFrame], logger: logging.Logger):
             dbClient.insert_many(df)
         logging.info("Insertion Completed")
     except Exception as e:
-        logging.error("Logging Failed with Error: " + e)
+        logging.error("Logging Failed with Error: " + str(e))
 
 
 
@@ -99,9 +99,9 @@ def main():
     c = Client()
 
     # Nacheinander exportieren – unabhängig per try/except
-    export_group(c, day_dir, today_str, WETTERSTATION_AUTHT_GROUP, "auth_group_1", logger)
-    export_group(c, day_dir, today_str, FUTTERKAMMER_AUTH_GROUP, "auth_group_2", logger)
-    export_group(c, day_dir, today_str, BRUTKAMMER_AUTH_GROUP, "auth_group_3", logger)
+    export_group(c, day_dir, today_str, WETTERSTATION_AUTHT_GROUP, "Wetterstation", logger)
+    export_group(c, day_dir, today_str, FUTTERKAMMER_AUTH_GROUP, "Futterkammer", logger)
+    export_group(c, day_dir, today_str, BRUTKAMMER_AUTH_GROUP, "Brutkammer", logger)
     logger.info("Alle Daten wurden als Csv Datei gespeichert.")
 
     insert_into_database(created_data_frames, logger=logger )
