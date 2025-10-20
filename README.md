@@ -5,14 +5,18 @@ Kleines Python-Projekt zum Abrufen, Ablegen und Visualisieren von Sensordaten (�
 ---
 
 ## Inhalt
-- [Ziele](#ziele)
-- [Architektur & Datenfluss](#architektur--datenfluss)
-- [Setup](#setup)
-- [Konfiguration (.env )](#konfiguration-env-)
-- [Lokales Ausführen](#lokales-ausführen)
-- [Grafana (später)](#grafana-später)
-- [Auto-TODO, Timeline & Historie](#auto-todo-timeline--historie)
-- [Roadmap & offene Punkte](#roadmap--offene-punkte)
+- [DigitalBeehive](#digitalbeehive)
+  - [Inhalt](#inhalt)
+  - [Ziele](#ziele)
+  - [Architektur \& Datenfluss](#architektur--datenfluss)
+  - [Setup](#setup)
+    - [Voraussetzungen](#voraussetzungen)
+    - [Installation](#installation)
+  - [Konfiguration (.env )](#konfiguration-env-)
+    - [.env](#env)
+  - [Grafana (später)](#grafana-später)
+- [](#)
+  - [Roadmap \& offene Punkte](#roadmap--offene-punkte)
 
 ---
 
@@ -33,7 +37,7 @@ API → (client.py) → CSV (optional in /data) → (job.py) → MongoDB (db=def
 ## Setup
 
 ### Voraussetzungen
-- Python ≥ 3.10  
+- Python == 3.11
 - (Optional) MongoDB lokal/remote
 - (Optional) Grafana
 
