@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: digitalbeehive-deployment
+  labels:
+    app: digitalbeehive
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: digitalbeehive
+  template:
+    metadata:
+      labels:
+        app: digitalbeehive
+    spec:
+      containers:
+        - name: digitalbeehive
+          image: 'slashdevcat/digitalbeehive:latest'
+          imagePullPolicy: Always 
+          envFrom:
+            - secretRef:
+                name: digitalbeehive-secret
