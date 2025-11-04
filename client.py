@@ -197,7 +197,7 @@ class Client():
         time_series = r.json()
 
         try:
-         beehive_id = entity_to_beehives(entityId)  # erwartet: vorhandene Mapping-Funktion
+         beehive_id = entity_to_beehives(entityId) 
         except Exception:
          beehive_id = None
 
