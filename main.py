@@ -1,14 +1,16 @@
 import os
 import sys
-import logging
 import time
+import json
+import smtplib
+import logging
+from email.mime.text import MIMEText
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-from typing import Dict
 
 import pandas as pd
-from dotenv import load_dotenv
 from pymongo import MongoClient, errors
+from dotenv import load_dotenv
 
 from client import Client
 from util.mapping import entity_to_beehives, entity_id_to_sensor
@@ -17,215 +19,208 @@ from constants2 import (
     WETTERSTATION_AUTHT_GROUP,
     FUTTERKAMMER_AUTH_GROUP,
     BRUTKAMMER_AUTH_GROUP,
-    NORMAL_VALUES
+    THRESHOLDS,
+    ALERT_EMAIL,
+    SWING_THRESHOLD,
+    BROOD_START_TEMP
 )
 
-# UTF-8 Konsole (vermeidet UnicodeEncodeError)
+
 try:
     sys.stdout.reconfigure(encoding="utf-8")
 except Exception:
     pass
 
+# ============================================================
+# Setup
+# ============================================================
 load_dotenv()
-
-# Logging konfigurieren
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)]
+    handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger("BeehiveMain")
 
-class BeehiveDbClient:
-    """MongoDB Client für Bienenstock-Sensordaten"""
+STATE_FILE = "state.json"   # speichert gesendete Alarme & Brutzeitstatus
 
-    def __init__(self, collection: str = "digitalBeehive"):
-        mongo_uri = os.getenv("MONGO_URI")
-        if not mongo_uri:
-            raise ValueError("MONGO_URI Umgebungsvariable nicht gesetzt!")
+# ============================================================
+# Persistent States (wird automatisch gespeichert)
+# ============================================================
+_daily_sent = {}
+_brood_status = {}
 
-        mongo_client = MongoClient(mongo_uri)
-        self.collection = mongo_client["default"][collection]
-
-        # Unique Index auf (entityId, key, ts)
+def load_state():
+    """Lädt gespeicherte Zustände (falls vorhanden)."""
+    global _daily_sent, _brood_status
+    if os.path.exists(STATE_FILE):
         try:
-            self.collection.create_index(
-                [("entityId", 1), ("key", 1), ("ts", 1)],
-                unique=True,
-                name="unique_sensor_reading"
-            )
+            with open(STATE_FILE, "r", encoding="utf-8") as f:
+                state = json.load(f)
+            _daily_sent = {datetime.strptime(k, "%Y-%m-%d").date(): set(tuple(x) for x in v) for k, v in state.get("daily_sent", {}).items()}
+            _brood_status = {int(k): v for k, v in state.get("brood_status", {}).items()}
+            logger.info(f"State aus {STATE_FILE} geladen")
         except Exception as e:
-            logger.warning(f"Index-Erstellung fehlgeschlagen: {e}")
+            logger.warning(f"Konnte {STATE_FILE} nicht laden: {e}")
 
-    def insert_many(self, df: pd.DataFrame) -> Dict[str, int]:
-        if df.empty:
-            return {"inserted": 0, "duplicates": 0, "errors": 0}
-
-        df_clean = df.copy()
-        if "datetime_utc" in df_clean.columns:
-            df_clean = df_clean[df_clean["datetime_utc"].notna()]
-        elif "datetime" in df_clean.columns:
-            df_clean = df_clean[df_clean["datetime"].notna()]
-        if "ts" in df_clean.columns:
-            df_clean = df_clean[df_clean["ts"].notna()]
-
-        if df_clean.empty:
-            return {"inserted": 0, "duplicates": 0, "errors": 0}
-
-        tp = TimeParser()
-        docs = tp.inject_bson_datetime(df_clean, replace_ts=True).to_dict("records")
-
-        inserted = 0
-        duplicates = 0
-        errors_count = 0
-
-        for doc in docs:
-            try:
-                self.collection.insert_one(doc)
-                inserted += 1
-            except errors.DuplicateKeyError:
-                duplicates += 1
-            except Exception as e:
-                errors_count += 1
-                logger.error(f"Fehler beim Einfügen: {e}")
-
-        return {
-            "inserted": inserted,
-            "duplicates": duplicates,
-            "errors": errors_count
+def save_state():
+    """Speichert aktuelle Zustände."""
+    try:
+        data = {
+            "daily_sent": {str(k): [list(x) for x in v] for k, v in _daily_sent.items()},
+            "brood_status": _brood_status
         }
+        with open(STATE_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        logger.error(f"Fehler beim Speichern des State-Files: {e}")
 
+# ============================================================
+# Email Versand
+# ============================================================
+def send_email(subject: str, body: str):
+    smtp_server = os.getenv("SMTP_SERVER")
+    smtp_port   = int(os.getenv("SMTP_PORT", 587))
+    smtp_user   = os.getenv("SMTP_USER")
+    smtp_pass   = os.getenv("SMTP_PASS")
 
+    if not (smtp_server and smtp_user and smtp_pass):
+        logger.warning("E-Mail-Alarm deaktiviert – SMTP-Daten fehlen")
+        return
+
+    msg = MIMEText(body)
+    msg["From"] = smtp_user
+    msg["To"]   = ALERT_EMAIL
+    msg["Subject"] = subject
+
+    try:
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(smtp_user, [ALERT_EMAIL], msg.as_string())
+            logger.info(f"📧 Alarm-Mail gesendet an {ALERT_EMAIL}")
+    except Exception as e:
+        logger.error(f"Fehler beim E-Mail Versand: {e}")
+
+# ============================================================
+# Datenaufbereitung & Analyse
+# ============================================================
 def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return df
-
     df = df[df["key"].notna() & (df["key"] != "beehiveId")].copy()
     df["value"] = pd.to_numeric(df["value"], errors="coerce")
-    df = df.dropna(subset=["value"])
-    if "ts" in df.columns:
-        df = df.dropna(subset=["ts"])
-
+    df = df.dropna(subset=["value", "ts"])
     tp = TimeParser()
     df = tp.inject_bson_datetime(df, replace_ts=False)
-
     if "datetime_utc" not in df.columns:
         if "datetime" in df.columns:
             df["datetime_utc"] = pd.to_datetime(df["datetime"], utc=True, errors="coerce")
         else:
             df["datetime_utc"] = pd.NaT
-
     df["datetime_local"] = df["datetime_utc"].dt.tz_convert("Europe/Berlin")
-
-    subset_cols = [c for c in ["entityId", "key", "ts"] if c in df.columns]
-    if subset_cols:
-        df = df.drop_duplicates(subset=subset_cols)
-
     df["sensorName"] = df["entityId"].map(entity_id_to_sensor)
-    df["beehiveIds"] = df["entityId"].map(entity_to_beehives)
-
-    if "datetime_local" in df.columns:
-        df = df.sort_values(by=["datetime_local", "entityId", "key"], ignore_index=True)
-
-    cols = [
-        "datetime_local", "entityId", "sensorName",
-        "key", "value", "beehiveIds", "datetime_utc", "ts"
-    ]
-    df = df[[c for c in cols if c in df.columns]]
-
+    df["beehiveIds"]  = df["entityId"].map(entity_to_beehives)
     return df
 
-def get_season(month: int) -> str:
-    if month in [12, 1, 2]:
-        return "Winter"
-    elif month in [3, 4, 5]:
-        return "Frühling"
-    elif month in [6, 7, 8]:
-        return "Sommer"
-    else:
-        return "Herbst"
-
-def check_anomalies(df: pd.DataFrame):
+# ============================================================
+# Anomalieerkennung
+# ============================================================
+def check_anomalies(df: pd.DataFrame, area: str):
     if df.empty:
-        return ["Keine Daten vorhanden"]
+        return
 
-    messages = []
+    global _daily_sent, _brood_status
+
+    today = datetime.now().date()
+    if today not in _daily_sent:
+        _daily_sent[today] = set()
 
     for _, row in df.iterrows():
-        sensor = row.get("sensorName") or row.get("entityId")
-        value = row["value"]
-        key = row["key"]
-        dt = row.get("datetime_local", datetime.now())
-        season = get_season(dt.month)
+        sensor = row.get("sensorName", "")
+        key    = row["key"]
+        value  = row["value"]
+        dt     = row["datetime_local"]
 
-        normal_range = None
-        for area in NORMAL_VALUES:
-            if sensor in NORMAL_VALUES[area]:
-                if key in NORMAL_VALUES[area][sensor]:
-                    normal_range = NORMAL_VALUES[area][sensor][key].get(season)
-                    break
+        # === 1. Starke Temperaturschwankungen ===
+        prev_key = f"prev_{sensor}_{key}"
+        prev_val = getattr(check_anomalies, prev_key, None)
+        if key == "temperature" and prev_val is not None:
+            diff = abs(value - prev_val)
+            delta_min = (dt - getattr(check_anomalies, f"{prev_key}_time")).total_seconds() / 60.0
+            if delta_min <= 10 and diff >= SWING_THRESHOLD:
+                subject = f"[BEEHIVE] Große Temperaturschwankung bei {sensor}"
+                body = f"Sensor {sensor}: Änderung {diff:.1f}°C in {delta_min:.1f} Minuten (aktuell {value}°C)."
+                if ("swing", sensor, key) not in _daily_sent[today]:
+                    send_email(subject, body)
+                    _daily_sent[today].add(("swing", sensor, key))
+                    print(f"🟠 Schwankung erkannt: {body}")
 
-        if not normal_range:
+        setattr(check_anomalies, prev_key, value)
+        setattr(check_anomalies, f"{prev_key}_time", dt)
+
+        # === 2. Grenzwerte prüfen ===
+        if key not in THRESHOLDS.get(area, {}):
             continue
 
-        min_val, max_val = normal_range
-        delta = 0.1 * (max_val - min_val)
-        orange_min = min_val - delta
-        orange_max = max_val + delta
+        for zone in THRESHOLDS[area][key]:
+            low, high = zone["range"]
+            if low <= value < high:
+                status = zone["status"]
+                color  = zone["color"]
+                type_id = None
 
-        if value < min_val or value > max_val:
-            messages.append(f"🔴 ALARM: {sensor} {key} = {value} (Grenze {min_val}-{max_val})")
-        elif value < min_val + delta or value > max_val - delta:
-            messages.append(f"🟠 VORWARNUNG: {sensor} {key} = {value} (Grenze {min_val}-{max_val})")
-        else:
-            messages.append(f"✅ OK: {sensor} {key} = {value}")
+                if color == "Rot":
+                    type_id = ("alarm", sensor, key)
+                elif color == "Orange":
+                    type_id = ("warnung", sensor, key)
 
-    return messages
+                if type_id and type_id not in _daily_sent[today]:
+                    subject = f"[BEEHIVE] {status}: {area} {key} ({sensor})"
+                    body    = f"{sensor} {key} = {value} → {status} (Grenze {low}–{high})"
+                    send_email(subject, body)
+                    _daily_sent[today].add(type_id)
+                    print(f"{'🔴' if color=='Rot' else '🟠'} {body}")
+                break
 
-
-def cleanup_old_csv(log_folder: str, days: int = 7):
-    now = time.time()
-    cutoff = now - days * 86400  # 7 Tage in Sekunden
-
-    for f in os.listdir(log_folder):
-        if f.endswith(".csv"):
-            path = os.path.join(log_folder, f)
-            if os.path.getmtime(path) < cutoff:
-                try:
-                    os.remove(path)
-                    print(f"🗑️ Gelöscht: {path}")
-                except Exception as e:
-                    print(f"⚠️ Fehler beim Löschen von {path}: {e}")
-
+    # === 3. Brutzeit Beginn/Ende (nur für Brutkammer) ===
+    year = datetime.now().year
+    if area == "Brutkammer":
+        temp_rows = df[df["key"] == "temperature"]
+        if not temp_rows.empty:
+            max_temp = temp_rows["value"].max()
+            if max_temp >= BROOD_START_TEMP and not _brood_status.get(year, False):
+                subject = "[BEEHIVE] Brutzeit beginnt wahrscheinlich"
+                body = f"Temperatur ≥ {BROOD_START_TEMP}°C (max {max_temp}°C) → Brutzeitbeginn erkannt."
+                send_email(subject, body)
+                _brood_status[year] = True
+                print(f"🔔 {body}")
+            elif max_temp < BROOD_START_TEMP and _brood_status.get(year, False):
+                subject = "[BEEHIVE] Brutzeit endet wahrscheinlich"
+                body = f"Temperatur fiel wieder unter {BROOD_START_TEMP}°C (max {max_temp}°C) → Brutzeitende erkannt."
+                send_email(subject, body)
+                _brood_status[year] = False
+                print(f"🔔 {body}")
 
 def fetch_and_clean(auth_group: str, group_name: str) -> pd.DataFrame:
     c = Client()
     now = datetime.now(ZoneInfo("Europe/Berlin"))
     start = now - timedelta(minutes=5)
-
-    start_date = start.strftime("%d.%m.%Y")
-    start_time = start.strftime("%H:%M")
-    end_date = now.strftime("%d.%m.%Y")
-    end_time = now.strftime("%H:%M")
-
-    print(f"\n=== {group_name} ({auth_group}) ===")
+    all_rows = []
     entity_ids = c.get_all_entity_ids(auth_group)
+    print(f"\n=== {group_name} ({auth_group}) ===")
     print(f"Gefundene Entity-IDs: {entity_ids}")
 
-    all_rows = []
-
     for eid in entity_ids:
-        print(f"\n--- Entity: {eid} ---")
         try:
             raw = c.get_time_series(
                 entityId=eid,
                 authGroup=auth_group,
-                startDate=start_date,
-                startTime=start_time,
-                endDate=end_date,
-                endTime=end_time
+                startDate=start.strftime("%d.%m.%Y"),
+                startTime=start.strftime("%H:%M"),
+                endDate=now.strftime("%d.%m.%Y"),
+                endTime=now.strftime("%H:%M")
             )
-
             if isinstance(raw, dict) and any(isinstance(v, dict) for v in raw.values()):
                 for key, measurements in raw.items():
                     if key.lower() == "beehiveid":
@@ -233,65 +228,73 @@ def fetch_and_clean(auth_group: str, group_name: str) -> pd.DataFrame:
                     all_rows.extend(c._normalize_timeseries_payload(eid, measurements))
             else:
                 all_rows.extend(c._normalize_timeseries_payload(eid, raw))
-
         except Exception as e:
-            print(f"⚠️ Fehler beim Abrufen von Entity {eid}: {e}")
+            logger.error(f"Fehler beim Abrufen Entity {eid}: {e}")
 
     df = pd.DataFrame(all_rows)
     df = c._to_berlin_datetime(df)
     df_clean = clean_dataframe(df)
-
-    print(f"\nBereinigt: {len(df_clean)} gültige Werte ({len(df) - len(df_clean)} entfernt)")
-    if not df_clean.empty:
-        print(df_clean.head(10).to_string(index=False))
-
+    print(f"Bereinigt: {len(df_clean)} gültige Werte")
     return df_clean
 
+# ============================================================
+# MongoDB Wrapper
+# ============================================================
+class BeehiveDbClient:
+    def __init__(self, collection="digitalBeehive"):
+        mongo_uri = os.getenv("MONGO_URI")
+        if not mongo_uri:
+            raise ValueError("MONGO_URI nicht gesetzt!")
+        client = MongoClient(mongo_uri)
+        self.collection = client["default"][collection]
 
+    def insert_many(self, df: pd.DataFrame):
+        if df.empty:
+            return
+        tp = TimeParser()
+        docs = tp.inject_bson_datetime(df, replace_ts=True).to_dict("records")
+        for doc in docs:
+            try:
+                self.collection.insert_one(doc)
+            except errors.DuplicateKeyError:
+                continue
+
+# ============================================================
+# Hauptprogramm
+# ============================================================
 def main():
     log_folder = "Logs"
     os.makedirs(log_folder, exist_ok=True)
-
-    db_client = BeehiveDbClient(collection="digitalBeehive")
-    all_results = []
+    db = BeehiveDbClient()
 
     for name, auth_group in [
-        ("Wetterstation", WETTERSTATION_AUTHT_GROUP),
         ("Futterkammer", FUTTERKAMMER_AUTH_GROUP),
-        ("Brutkammer", BRUTKAMMER_AUTH_GROUP),
+        ("Brutkammer",   BRUTKAMMER_AUTH_GROUP),
+        ("Wetterstation", WETTERSTATION_AUTHT_GROUP),
     ]:
         df = fetch_and_clean(auth_group, name)
-        if not df.empty:
-            all_results.append((name, df))
-
-    total_rows = sum(len(df) for _, df in all_results)
-    print(f"\n=== Zusammenfassung: {total_rows} bereinigte Werte insgesamt ===")
-
-    if total_rows > 0:
+        if df.empty:
+            continue
+        check_anomalies(df, name)
+        db.insert_many(df)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        for name, df in all_results:
-            filename = os.path.join(log_folder, f"cleaned_{name.lower()}_{timestamp}.csv")
-            df.to_csv(filename, index=False, sep=";", encoding="utf-8-sig")
-            print(f"💾 Gespeichert: {filename}")
+        filename = os.path.join(log_folder, f"{name.lower()}_{timestamp}.csv")
+        df.to_csv(filename, index=False, sep=";", encoding="utf-8-sig")
+        print(f"💾 Gespeichert: {filename}")
 
-            print(f"\n=== Alarmcheck für {name} ===")
-            messages = check_anomalies(df)
-            if messages:
-                for msg in messages:
-                    print(msg)
-            else:
-                print("✅ Alle Werte im Normalbereich")
+    # Alte CSVs älter als 7 Tage löschen
+    cutoff = time.time() - 7 * 86400
+    for f in os.listdir(log_folder):
+        path = os.path.join(log_folder, f)
+        if f.endswith(".csv") and os.path.getmtime(path) < cutoff:
+            os.remove(path)
+            print(f"🗑️ Alte Datei gelöscht: {f}")
 
-            print(f"\n=== Speichern in MongoDB für {name} ===")
-            result = db_client.insert_many(df)
-            print(f"MongoDB Insert: {result['inserted']} eingefügt, "
-                  f"{result['duplicates']} Duplikate, {result['errors']} Fehler")
-
-    cleanup_old_csv(log_folder)
-
+    save_state()  # <-- Status nach jedem Durchlauf speichern
 
 if __name__ == "__main__":
+    load_state()
     while True:
         main()
-        print("\n⏱️ Warten 5 Minuten bis zum nächsten Abruf...\n")
+        print("\n⏱️ Warten 5 Minuten bis zum nächsten Durchlauf...\n")
         time.sleep(300)

@@ -152,7 +152,7 @@ class Client():
         session =  self._make_session()
         r = session.get(
             f"{BASE_URL}/authGroup/{authGroup}/valueType",
-            params={"x-apikey": API_KEY} 
+            headers={"x-apikey": API_KEY}
         ) 
         r.raise_for_status()
         value_types = r.json()
