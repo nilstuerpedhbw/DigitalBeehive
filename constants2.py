@@ -4,8 +4,6 @@ FUTTERKAMMER_AUTH_GROUP   = "digital_bee_hive_42_dragino-s31lb"
 BRUTKAMMER_AUTH_GROUP     = "digital_bee_hive_42_dragino-d23-lb"
 
 
-ALERT_EMAIL = "dein.name@beispiel.de"  
-
 
 SENSOR_TO_ENTITY_ID = {
     "LoRa-2CF7F1C0613005BC": "cb45a700-fa97-11ef-9d11-f54d6a2753bf",

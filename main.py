@@ -20,7 +20,6 @@ from constants2 import (
     FUTTERKAMMER_AUTH_GROUP,
     BRUTKAMMER_AUTH_GROUP,
     THRESHOLDS,
-    ALERT_EMAIL,
     SWING_THRESHOLD,
     BROOD_START_TEMP
 )
@@ -83,6 +82,7 @@ def send_email(subject: str, body: str):
     smtp_port   = int(os.getenv("SMTP_PORT", 587))
     smtp_user   = os.getenv("SMTP_USER")
     smtp_pass   = os.getenv("SMTP_PASS")
+    alert_email = os.getenv("ALERT_EMAIL")
 
     if not (smtp_server and smtp_user and smtp_pass):
         logger.warning("E-Mail-Alarm deaktiviert – SMTP-Daten fehlen")
@@ -90,15 +90,15 @@ def send_email(subject: str, body: str):
 
     msg = MIMEText(body)
     msg["From"] = smtp_user
-    msg["To"]   = ALERT_EMAIL
+    msg["To"]   = alert_email
     msg["Subject"] = subject
 
     try:
         with smtplib.SMTP(smtp_server, smtp_port) as server:
             server.starttls()
             server.login(smtp_user, smtp_pass)
-            server.sendmail(smtp_user, [ALERT_EMAIL], msg.as_string())
-            logger.info(f"📧 Alarm-Mail gesendet an {ALERT_EMAIL}")
+            server.sendmail(smtp_user, [alert_email], msg.as_string())
+            logger.info(f"📧 Alarm-Mail gesendet an {alert_email}")
     except Exception as e:
         logger.error(f"Fehler beim E-Mail Versand: {e}")
 
