@@ -80,6 +80,7 @@ def save_state():
         }
         with open(state_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
+            logger.info(f"State in {state_path} gespeichert")
     except Exception as e:
         logger.error(f"Fehler beim Speichern des State-Files: {e}")
 
