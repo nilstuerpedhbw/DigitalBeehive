@@ -164,7 +164,7 @@ def check_anomalies(df: pd.DataFrame, area: str):
                 if ("swing", sensor, key) not in _daily_sent[today]:
                     send_email(subject, body)
                     _daily_sent[today].add(("swing", sensor, key))
-                    print(f"🟠 Schwankung erkannt: {body}")
+                    logger.info(f"🟠 Schwankung erkannt: {body}")
 
         setattr(check_anomalies, prev_key, value)
         setattr(check_anomalies, f"{prev_key}_time", dt)
@@ -190,7 +190,7 @@ def check_anomalies(df: pd.DataFrame, area: str):
                     body    = f"{sensor} {key} = {value} → {status} (Grenze {low}–{high})"
                     send_email(subject, body)
                     _daily_sent[today].add(type_id)
-                    print(f"{'🔴' if color=='Rot' else '🟠'} {body}")
+                    logger.info(f"{'🔴' if color=='Rot' else '🟠'} {body}")
                 break
 
     # === 3. Brutzeit Beginn/Ende (nur für Brutkammer) ===
@@ -204,13 +204,13 @@ def check_anomalies(df: pd.DataFrame, area: str):
                 body = f"Temperatur ≥ {BROOD_START_TEMP}°C (max {max_temp}°C) → Brutzeitbeginn erkannt."
                 send_email(subject, body)
                 _brood_status[year] = True
-                print(f"🔔 {body}")
+                logger.info(f"🔔 {body}")
             elif max_temp < BROOD_START_TEMP and _brood_status.get(year, False):
                 subject = "[BEEHIVE] Brutzeit endet wahrscheinlich"
                 body = f"Temperatur fiel wieder unter {BROOD_START_TEMP}°C (max {max_temp}°C) → Brutzeitende erkannt."
                 send_email(subject, body)
                 _brood_status[year] = False
-                print(f"🔔 {body}")
+                logger.info(f"🔔 {body}")
 
 def fetch_and_clean(auth_group: str, group_name: str) -> pd.DataFrame:
     c = Client()
@@ -218,8 +218,8 @@ def fetch_and_clean(auth_group: str, group_name: str) -> pd.DataFrame:
     start = now - timedelta(minutes=5)
     all_rows = []
     entity_ids = c.get_all_entity_ids(auth_group)
-    print(f"\n=== {group_name} ({auth_group}) ===")
-    print(f"Gefundene Entity-IDs: {entity_ids}")
+    logger.info(f"\n=== {group_name} ({auth_group}) ===")
+    logger.info(f"Gefundene Entity-IDs: {entity_ids}")
 
     for eid in entity_ids:
         try:
@@ -244,7 +244,7 @@ def fetch_and_clean(auth_group: str, group_name: str) -> pd.DataFrame:
     df = pd.DataFrame(all_rows)
     df = c._to_berlin_datetime(df)
     df_clean = clean_dataframe(df)
-    print(f"Bereinigt: {len(df_clean)} gültige Werte")
+    logger.info(f"Bereinigt: {len(df_clean)} gültige Werte")
     return df_clean
 
 # ============================================================
@@ -290,7 +290,7 @@ def main():
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = os.path.join(log_folder, f"{name.lower()}_{timestamp}.csv")
         df.to_csv(filename, index=False, sep=";", encoding="utf-8-sig")
-        print(f"💾 Gespeichert: {filename}")
+        logger.info(f"💾 Gespeichert: {filename}")
 
     # Alte CSVs älter als 7 Tage löschen
     cutoff = time.time() - 7 * 86400
@@ -298,7 +298,7 @@ def main():
         path = os.path.join(log_folder, f)
         if f.endswith(".csv") and os.path.getmtime(path) < cutoff:
             os.remove(path)
-            print(f"🗑️ Alte Datei gelöscht: {f}")
+            logger.info(f"🗑️ Alte Datei gelöscht: {f}")
 
     save_state()  # <-- Status nach jedem Durchlauf speichern
 
@@ -306,5 +306,5 @@ if __name__ == "__main__":
     load_state()
     while True:
         main()
-        print("\n⏱️ Warten 5 Minuten bis zum nächsten Durchlauf...\n")
+        logger.info("\n⏱️ Warten 5 Minuten bis zum nächsten Durchlauf...\n")
         time.sleep(300)
