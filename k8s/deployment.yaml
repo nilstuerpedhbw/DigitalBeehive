@@ -21,3 +21,11 @@ spec:
           envFrom:
             - secretRef:
                 name: digitalbeehive-secret
+          volumeMounts:
+            - name: digitalbeehive-storage
+              mountPath: /app/state.json
+              subPath: state.json
+      volumes:
+        - name: digitalbeehive-storage
+          persistentVolumeClaim:
+            claimName: digitalbeehive-pvc
