@@ -40,8 +40,9 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger("BeehiveMain")
-
-STATE_FILE = "state.json"   # speichert gesendete Alarme & Brutzeitstatus
+   # speichert gesendete Alarme & Brutzeitstatus
+DATA_FOLDER= "data"
+STATE_FILE= "state.json"
 
 # ============================================================
 # Persistent States (wird automatisch gespeichert)
@@ -51,25 +52,33 @@ _brood_status = {}
 
 def load_state():
     """Lädt gespeicherte Zustände (falls vorhanden)."""
+    
+    os.makedirs(DATA_FOLDER, exist_ok=True)
+    state_path = os.path.join(DATA_FOLDER, STATE_FILE)
+    
     global _daily_sent, _brood_status
-    if os.path.exists(STATE_FILE):
+    if os.path.exists(state_path):
         try:
-            with open(STATE_FILE, "r", encoding="utf-8") as f:
+            with open(state_path , "r", encoding="utf-8") as f:
                 state = json.load(f)
             _daily_sent = {datetime.strptime(k, "%Y-%m-%d").date(): set(tuple(x) for x in v) for k, v in state.get("daily_sent", {}).items()}
             _brood_status = {int(k): v for k, v in state.get("brood_status", {}).items()}
-            logger.info(f"State aus {STATE_FILE} geladen")
+            logger.info(f"State aus {state_path} geladen")
         except Exception as e:
-            logger.warning(f"Konnte {STATE_FILE} nicht laden: {e}")
-
+            logger.warning(f"Konnte {state_path} nicht laden: {e}")
+    else:
+        logger.info("Keine State-File gefunden")
+        
 def save_state():
     """Speichert aktuelle Zustände."""
+    state_path = os.path.join(DATA_FOLDER, STATE_FILE)
+    
     try:
         data = {
             "daily_sent": {str(k): [list(x) for x in v] for k, v in _daily_sent.items()},
             "brood_status": _brood_status
         }
-        with open(STATE_FILE, "w", encoding="utf-8") as f:
+        with open(state_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
     except Exception as e:
         logger.error(f"Fehler beim Speichern des State-Files: {e}")

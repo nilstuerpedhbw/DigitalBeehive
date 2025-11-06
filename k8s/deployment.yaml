@@ -23,8 +23,7 @@ spec:
                 name: digitalbeehive-secret
           volumeMounts:
             - name: digitalbeehive-storage
-              mountPath: /app/state.json
-              subPath: state.json
+              mountPath: /app/data
       volumes:
         - name: digitalbeehive-storage
           persistentVolumeClaim:

@@ -218,4 +218,4 @@ __marimo__/
 # Project specific ignores
 Logs/
 data/
-
+state.json
