@@ -14,6 +14,27 @@ SENSOR_TO_ENTITY_ID = {
 }
 ENTITY_ID_TO_SENSOR = {v: k for k, v in SENSOR_TO_ENTITY_ID.items()}
 
+SENSOR_TO_BEEHIVE_IDS = {
+    "LoRa-2CF7F1C0613005BC": [1, 2, 3],
+    "LoRa-A840411F645AE815": [1],
+    "LoRa-A84041892E5A7A68": [1],
+    "LoRa-A84041CC625AE81E": [2],
+    "LoRa-A840419521864618": [2],
+    "LoRa-A8404138A188669C": [3],
+    "LoRa-A8404160C85A7A7B": [3],
+}
+
+SENSOR_TYPE = {
+    "LoRa-2CF7F1C0613005BC": "LoRaWAN SenseCAP-S2120",
+    "LoRa-A8404138A188669C": "LoRaWAN Dragino-S31-LB",
+    "LoRa-A84041CC625AE81E": "LoRaWAN Dragino-S31-LB",
+    "LoRa-A8404160C85A7A7B": "LoRaWAN Dragino-D23-LB",
+    "LoRa-A84041892E5A7A68": "LoRaWAN Dragino-D23-LB",
+    "LoRa-A840419521864618": "LoRaWAN Dragino-D23-LB",
+    "LoRa-A840411F645AE815": "LoRaWAN Dragino-S31-LB",  
+}
+
+
 THRESHOLDS = {
     "Futterkammer": {
         "temperature": [
