@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 from client import Client
 from util.mapping import entity_to_beehives, entity_id_to_sensor
 from util.timeParser import TimeParser
-from constants2 import (
+from data.constants import (
     WETTERSTATION_AUTHT_GROUP,
     FUTTERKAMMER_AUTH_GROUP,
     BRUTKAMMER_AUTH_GROUP,
@@ -273,7 +273,7 @@ class BeehiveDbClient:
 # Hauptprogramm
 # ============================================================
 def main():
-    log_folder = "Logs"
+    log_folder = "logs"
     os.makedirs(log_folder, exist_ok=True)
     db = BeehiveDbClient()
 

@@ -3,8 +3,6 @@ WETTERSTATION_AUTHT_GROUP = "digital_bee_hive_42-s2120"
 FUTTERKAMMER_AUTH_GROUP   = "digital_bee_hive_42_dragino-s31lb"
 BRUTKAMMER_AUTH_GROUP     = "digital_bee_hive_42_dragino-d23-lb"
 
-
-
 SENSOR_TO_ENTITY_ID = {
     "LoRa-2CF7F1C0613005BC": "cb45a700-fa97-11ef-9d11-f54d6a2753bf",
     "LoRa-A8404138A188669C": "a4d4afc0-6eb6-11ef-b667-951a94d6009e",
@@ -15,7 +13,6 @@ SENSOR_TO_ENTITY_ID = {
     "LoRa-A840411F645AE815": "f99dddb0-ffde-11ef-9545-f1c19ab288c3",
 }
 ENTITY_ID_TO_SENSOR = {v: k for k, v in SENSOR_TO_ENTITY_ID.items()}
-
 
 THRESHOLDS = {
     "Futterkammer": {
@@ -44,7 +41,6 @@ THRESHOLDS = {
         ]
     }
 }
-
 
 SWING_THRESHOLD = 3.0  # z. B. Temperatur-Änderung >3°C in 10 Minuten zählt als große Schwankung
 BROOD_START_TEMP = 30.0  # z. B. erste Überschreitung → Brutzeit wahrscheinlich
