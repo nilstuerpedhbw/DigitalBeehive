@@ -1,5 +1,5 @@
 from typing import List, Optional
-from data.constants import (
+from constants import (
     SENSOR_TO_ENTITY_ID,
     ENTITY_ID_TO_SENSOR,
     SENSOR_TO_BEEHIVE_IDS,

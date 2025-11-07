@@ -12,7 +12,7 @@ import pandas as pd
 import requests
 from requests.adapters import HTTPAdapter, Retry
 
-from data.constants import WETTERSTATION_AUTHT_GROUP
+from constants import WETTERSTATION_AUTHT_GROUP
 from util.timeParser import TimeParser
 from util.mapping import entity_to_beehives
 
