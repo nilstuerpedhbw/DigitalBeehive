@@ -346,7 +346,7 @@ Typischer Ablauf:
 3. Deployments und Services ausrollen:
 
    ```bash
-   kubectl apply -f k8s/
+   kubectl apply -f k8s/[file.yaml]
    ```
 
 Der Pod führt dann `main.py` aus, pollt alle 5 Minuten die IoT-API und schreibt in die konfigurierte MongoDB.
